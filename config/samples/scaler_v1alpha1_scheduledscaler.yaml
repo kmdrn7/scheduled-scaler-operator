@@ -1,0 +1,8 @@
+apiVersion: scaler.andikahmadr.io/v1alpha1
+kind: ScheduledScaler
+metadata:
+  name: scheduledscaler-sample
+spec:
+  schedule: "2021-09-09T14:54:00Z,2021-09-09T14:55:00Z"
+  deploymentName: "web-2"
+  replicaCount: 5

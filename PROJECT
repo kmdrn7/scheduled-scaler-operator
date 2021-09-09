@@ -1,0 +1,19 @@
+domain: andikahmadr.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: scheduled-scaler-operator
+repo: github.com/kmdrn7/scheduled-scaler-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: andikahmadr.io
+  group: scaler
+  kind: ScheduledScaler
+  path: github.com/kmdrn7/scheduled-scaler-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"
