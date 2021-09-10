@@ -81,6 +81,7 @@ func main() {
 	if err = (&controllers.ScheduledScalerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Log:    ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ScheduledScaler")
 		os.Exit(1)

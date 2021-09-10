@@ -19,11 +19,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	scalerv1alpha1 "github.com/kmdrn7/scheduled-scaler-operator/api/v1alpha1"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,12 +38,14 @@ import (
 // ScheduledScalerReconciler reconciles a ScheduledScaler object
 type ScheduledScalerReconciler struct {
 	client.Client
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=scaler.andikahmadr.io,resources=scheduledscalers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=scaler.andikahmadr.io,resources=scheduledscalers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=scaler.andikahmadr.io,resources=scheduledscalers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -54,10 +57,10 @@ type ScheduledScalerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logrus.WithField("scheduledscaler", req.NamespacedName)
+	log := r.Log
 	cl, errCl := client.New(config.GetConfigOrDie(), client.Options{})
 	if errCl != nil {
-		log.Error("Failed to create client", errCl)
+		log.Error(errCl, "Failed to create client")
 		os.Exit(1)
 	}
 
@@ -71,9 +74,10 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(errInstance, "Error getting resource.")
 		return ctrl.Result{}, errInstance
 	}
-	log.Info("Reconciling resource ", instance.Name)
+	log.Info("Reconciling resource " + req.NamespacedName.String())
 
 	if instance.Status.Phase == "" {
+		log.Info("Resource's phase is not initiated, changed to pending phase")
 		instance.Status.Phase = scalerv1alpha1.PhasePending
 	}
 
@@ -106,24 +110,21 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// state transition PENDING -> RUNNING -> DONE
 	switch instance.Status.Phase {
 	case scalerv1alpha1.PhasePending:
-		log.Info(req.NamespacedName, " still in pending phase")
-		log.Info("Now : ", now)
-		log.Info("Time Start : ", timeStart)
+		log.Info(req.NamespacedName.String() + " still in pending phase")
+		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
 		if now.Before(timeStart) {
 			reconcileAfter := timeStart.Sub(now)
-			log.Info("Time to reconcile is ", reconcileAfter)
+			log.Info("Time to reconcile is " + reconcileAfter.String())
 			return ctrl.Result{RequeueAfter: reconcileAfter}, nil
 		}
 
-		log.Info("change phase to running")
+		log.Info("change " + req.NamespacedName.String() + " phase to running")
 		instance.Status.Phase = scalerv1alpha1.PhaseRunning
 
 	case scalerv1alpha1.PhaseRunning:
-		log.Info(req.NamespacedName, " is in running phase")
-		log.Info("Now : ", now)
-		log.Info("Time Start : ", timeStart)
-		log.Info("Stored Replica Count : ", instance.Status.StoredReplicaCount)
+		log.Info(req.NamespacedName.String() + " is in running phase")
+		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
 		//get deployment
 		deployment := &appsv1.Deployment{}
@@ -133,8 +134,8 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}, deployment)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.Error("Cannot find deployment with name ", deployment.Name, "in ", instance.Namespace, " namespace")
-				log.Error("Trying again after 10 seconds")
+				log.Error(err, "Cannot find deployment with name "+deployment.Name+"in "+instance.Namespace+" namespace")
+				log.Error(err, "Trying again after 10 seconds")
 				return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 			}
 		}
@@ -147,21 +148,21 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if now.After(timeStart) && now.Before(timeEnd) {
 			// get deployment's replica count and compare with instance's spec
 			// update status StoredReplicaCount to match with Deployment's replica count
-			log.Info("Deployment ", deployment.Name, " has ", *deployment.Spec.Replicas, " replicas")
+			log.Info("Deployment " + deployment.Name + " has " + strconv.Itoa(int(*deployment.Spec.Replicas)) + " replicas")
 			if *deployment.Spec.Replicas != instance.Spec.ReplicaCount {
-				log.Info("Replica count in deployment ", deployment.Name, " didn't match with ", req.NamespacedName)
-				log.Info("Scaling deployment ", deployment.Name, " to ", instance.Spec.ReplicaCount, " replicas")
+				log.Info("Replica count in deployment " + deployment.Name + " didn't match with " + req.NamespacedName.String())
+				log.Info("Scaling deployment " + deployment.Name + " to " + strconv.Itoa(int(instance.Spec.ReplicaCount)) + " replicas")
 				deployment.Spec.Replicas = &instance.Spec.ReplicaCount
 				err := cl.Update(ctx, deployment)
 				if err != nil {
-					log.Error("Error updating deployment ", deployment.Name, err)
+					log.Error(err, "Error updating deployment "+deployment.Name)
 					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 				}
-				log.Info("Successfully scaling ", deployment.Name, " with ", instance.Spec.ReplicaCount, " replicas")
+				log.Info("Successfully scaling " + deployment.Name + " with " + strconv.Itoa(int(instance.Spec.ReplicaCount)) + " replicas")
 			}
 			// reconcile
 			reconcileAfter := timeEnd.Sub(now)
-			log.Info("Time to reconcile is ", reconcileAfter)
+			log.Info("Time to reconcile is " + reconcileAfter.String())
 			return ctrl.Result{RequeueAfter: reconcileAfter}, nil
 		} else {
 			log.Info("change phase to done")
@@ -169,7 +170,8 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 
 	case scalerv1alpha1.PhaseDone:
-		log.Info(req.NamespacedName, " is in done phase")
+		log.Info(req.NamespacedName.String() + " is in done phase")
+		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
 		//get deployment
 		deployment := &appsv1.Deployment{}
@@ -179,12 +181,12 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}, deployment)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.Error("Cannot find deployment with name ", deployment.Name, "in ", instance.Namespace, " namespace")
-				log.Error("Trying again after 10 seconds")
+				log.Error(err, "Cannot find deployment with name "+deployment.Name+"in "+instance.Namespace+" namespace")
+				log.Error(err, "Trying again after 10 seconds")
 				return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 			}
 		}
-		log.Info("Deployment ", deployment.Name, " has ", *deployment.Spec.Replicas, " replicas")
+		log.Info("Deployment " + deployment.Name + " has " + strconv.Itoa(int(*deployment.Spec.Replicas)) + " replicas")
 
 		if *deployment.Spec.Replicas == instance.Status.StoredReplicaCount {
 			log.Info("Nothing to do since deployment's replicas is not changed")
@@ -192,10 +194,10 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			deployment.Spec.Replicas = &instance.Status.StoredReplicaCount
 			err = cl.Update(ctx, deployment)
 			if err != nil {
-				log.Error("Error updating deployment ", deployment.Name, err)
+				log.Error(err, "Error updating deployment "+deployment.Name)
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
-			log.Info("Successfully scaling back ", deployment.Name, " to ", instance.Status.StoredReplicaCount, " replicas")
+			log.Info("Successfully scaling back " + deployment.Name + " to " + strconv.Itoa(int(instance.Status.StoredReplicaCount)) + " replicas")
 		}
 
 	default:
