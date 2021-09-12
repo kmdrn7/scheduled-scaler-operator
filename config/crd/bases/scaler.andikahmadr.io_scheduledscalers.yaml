@@ -50,24 +50,32 @@ spec:
             description: ScheduledScalerSpec defines the desired state of ScheduledScaler
             properties:
               deploymentName:
+                description: DeploymentName defines target of deployment
                 type: string
               replicaCount:
+                description: ReplicaCount defines how many replicas deployment will
+                  scale into
                 format: int32
                 type: integer
               schedule:
-                description: Foo is an example field of ScheduledScaler. Edit scheduledscaler_types.go
-                  to remove/update
-                type: string
+                description: Schedule defines the time between scaling up and down
+                properties:
+                  end:
+                    description: End time for scheduling
+                    type: string
+                  start:
+                    description: Start time for scheduling
+                    type: string
+                type: object
             type: object
           status:
             description: ScheduledScalerStatus defines the observed state of ScheduledScaler
             properties:
               phase:
+                description: Phase store information about phase of this resource
                 type: string
               storedReplicaCount:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
+                description: StoredReplicaCount store information original replicas
                 format: int32
                 type: integer
             type: object

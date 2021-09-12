@@ -29,22 +29,34 @@ const (
 	PhaseDone    = "DONE"
 )
 
+type Schedule struct {
+	// Start time for scheduling
+	Start string `json:"start,omitempty"`
+	// End time for scheduling
+	End   string `json:"end,omitempty"`
+}
+
 // ScheduledScalerSpec defines the desired state of ScheduledScaler
 type ScheduledScalerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ScheduledScaler. Edit scheduledscaler_types.go to remove/update
-	Schedule       string `json:"schedule,omitempty"`
-	DeploymentName string `json:"deploymentName,omitempty"`
-	ReplicaCount   int32  `json:"replicaCount,omitempty"`
+	// Schedule defines the time between scaling up and down
+	Schedule       Schedule `json:"schedule,omitempty"`
+	// DeploymentName defines target of deployment
+	DeploymentName string   `json:"deploymentName,omitempty"`
+	// ReplicaCount defines how many replicas deployment will scale into
+	ReplicaCount   int32    `json:"replicaCount,omitempty"`
 }
 
 // ScheduledScalerStatus defines the observed state of ScheduledScaler
 type ScheduledScalerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// StoredReplicaCount store information original replicas
 	StoredReplicaCount int32  `json:"storedReplicaCount,omitempty"`
+	// Phase store information about phase of this resource
 	Phase              string `json:"phase,omitempty"`
 }
 

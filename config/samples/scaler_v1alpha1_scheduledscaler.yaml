@@ -4,6 +4,8 @@ metadata:
   name: scheduledscaler-sample
   namespace: web
 spec:
-  schedule: "2021-09-09T14:54:00Z,2021-09-09T14:55:00Z"
+  schedule:
+    start: "2021-09-11T14:54:00Z"
+    end: "2021-09-11T14:55:00Z"
   deploymentName: "web-2"
   replicaCount: 5

@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	scalerv1alpha1 "github.com/kmdrn7/scheduled-scaler-operator/api/v1alpha1"
+	timeUtils "github.com/kmdrn7/scheduled-scaler-operator/pkg/time"
 	appsv1 "k8s.io/api/apps/v1"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"strconv"
-	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -85,24 +85,16 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance.Status.StoredReplicaCount = -1
 	}
 
-	timeLayout := "2006-01-02T15:04:05Z"
-	timeZone, err := time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		fmt.Println("Error set timezone")
-	}
+	now := timeUtils.Now()
+	scheduleStart := instance.Spec.Schedule.Start
+	scheduleEnd := instance.Spec.Schedule.End
 
-	now := time.Now().UTC().In(timeZone)
-	schedule := instance.Spec.Schedule
-	scheduleSplit := strings.Split(schedule, ",")
-	scheduleStart := scheduleSplit[0]
-	scheduleEnd := scheduleSplit[1]
-
-	timeStart, err := time.ParseInLocation(timeLayout, scheduleStart, timeZone)
+	timeStart, err := timeUtils.Parse(scheduleStart)
 	if err != nil {
 		fmt.Println("Error parsing start time")
 	}
 
-	timeEnd, err := time.ParseInLocation(timeLayout, scheduleEnd, timeZone)
+	timeEnd, err := timeUtils.Parse(scheduleEnd)
 	if err != nil {
 		fmt.Println("Error parsing end time")
 	}
@@ -111,7 +103,7 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	switch instance.Status.Phase {
 	case scalerv1alpha1.PhasePending:
 		log.Info(req.NamespacedName.String() + " still in pending phase")
-		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
+		log.Info(req.NamespacedName.String() + " detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
 		if now.Before(timeStart) {
 			reconcileAfter := timeStart.Sub(now)
@@ -124,9 +116,9 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	case scalerv1alpha1.PhaseRunning:
 		log.Info(req.NamespacedName.String() + " is in running phase")
-		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
+		log.Info(req.NamespacedName.String() + " detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
-		//get deployment
+		// get deployment
 		deployment := &appsv1.Deployment{}
 		err := cl.Get(ctx, client.ObjectKey{
 			Namespace: instance.Namespace,
@@ -155,7 +147,7 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				deployment.Spec.Replicas = &instance.Spec.ReplicaCount
 				err := cl.Update(ctx, deployment)
 				if err != nil {
-					log.Error(err, "Error updating deployment "+deployment.Name)
+					log.Error(err, "Error updating deployment " + deployment.Name)
 					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 				}
 				log.Info("Successfully scaling " + deployment.Name + " with " + strconv.Itoa(int(instance.Spec.ReplicaCount)) + " replicas")
@@ -171,9 +163,9 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	case scalerv1alpha1.PhaseDone:
 		log.Info(req.NamespacedName.String() + " is in done phase")
-		log.Info(req.NamespacedName.String()+" detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
+		log.Info(req.NamespacedName.String() + " detail", "now", now.String(), "time start", timeStart.String(), "stored replica count", strconv.Itoa(int(instance.Status.StoredReplicaCount)))
 
-		//get deployment
+		// get deployment
 		deployment := &appsv1.Deployment{}
 		err := cl.Get(ctx, client.ObjectKey{
 			Namespace: instance.Namespace,
