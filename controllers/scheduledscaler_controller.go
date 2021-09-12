@@ -83,8 +83,6 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if instance.Status.Phase == "" {
 		log.Info("Resource's phase is not initiated, changed to pending phase")
 		instance.Status.Phase = scalerv1alpha1.PhasePending
-	} else if instance.Status.Phase == scalerv1alpha1.PhaseDone {
-		instance.Status.Phase = scalerv1alpha1.PhaseRunning
 	}
 
 	now := timeUtils.Now()
@@ -193,6 +191,13 @@ func (r *ScheduledScalerReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 			log.Info("Successfully scaling back " + deployment.Name + " to " + strconv.Itoa(int(instance.Status.StoredReplicaCount)) + " replicas")
 		}
+
+		instance.Status.Phase = scalerv1alpha1.PhaseFinish
+		instance.Status.StoredReplicaCount = -2
+		instance.Status.LastVersion = instance.ResourceVersion
+
+	case scalerv1alpha1.PhaseFinish:
+		log.Info(req.NamespacedName.String() + " is in finish phase")
 
 	default:
 		return ctrl.Result{}, nil

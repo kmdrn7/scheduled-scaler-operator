@@ -27,6 +27,7 @@ const (
 	PhasePending = "PENDING"
 	PhaseRunning = "RUNNING"
 	PhaseDone    = "DONE"
+	PhaseFinish  = "FINISH"
 )
 
 type Schedule struct {
@@ -58,6 +59,8 @@ type ScheduledScalerStatus struct {
 	StoredReplicaCount int32 `json:"storedReplicaCount,omitempty"`
 	// Phase store information about phase of this resource
 	Phase string `json:"phase,omitempty"`
+	// LastVersion store information about last resource version before this reconcile
+	LastVersion string `json:"lastVersion,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -71,6 +71,10 @@ spec:
           status:
             description: ScheduledScalerStatus defines the observed state of ScheduledScaler
             properties:
+              lastVersion:
+                description: LastVersion store information about last resource version
+                  before this reconcile
+                type: string
               phase:
                 description: Phase store information about phase of this resource
                 type: string

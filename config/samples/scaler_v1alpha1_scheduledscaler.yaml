@@ -5,7 +5,7 @@ metadata:
   namespace: web
 spec:
   schedule:
-    start: "2021-09-11T14:54:00Z"
-    end: "2021-09-11T14:55:00Z"
+    start: "2021-09-12T20:33:00Z"
+    end: "2021-09-12T20:34:00Z"
   deploymentName: "web-2"
   replicaCount: 5
