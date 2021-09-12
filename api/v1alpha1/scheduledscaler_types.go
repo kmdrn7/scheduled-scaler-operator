@@ -33,7 +33,7 @@ type Schedule struct {
 	// Start time for scheduling
 	Start string `json:"start,omitempty"`
 	// End time for scheduling
-	End   string `json:"end,omitempty"`
+	End string `json:"end,omitempty"`
 }
 
 // ScheduledScalerSpec defines the desired state of ScheduledScaler
@@ -42,11 +42,11 @@ type ScheduledScalerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Schedule defines the time between scaling up and down
-	Schedule       Schedule `json:"schedule,omitempty"`
+	Schedule Schedule `json:"schedule,omitempty"`
 	// DeploymentName defines target of deployment
-	DeploymentName string   `json:"deploymentName,omitempty"`
+	DeploymentName string `json:"deploymentName,omitempty"`
 	// ReplicaCount defines how many replicas deployment will scale into
-	ReplicaCount   int32    `json:"replicaCount,omitempty"`
+	ReplicaCount int32 `json:"replicaCount,omitempty"`
 }
 
 // ScheduledScalerStatus defines the observed state of ScheduledScaler
@@ -55,9 +55,9 @@ type ScheduledScalerStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// StoredReplicaCount store information original replicas
-	StoredReplicaCount int32  `json:"storedReplicaCount,omitempty"`
+	StoredReplicaCount int32 `json:"storedReplicaCount,omitempty"`
 	// Phase store information about phase of this resource
-	Phase              string `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true
