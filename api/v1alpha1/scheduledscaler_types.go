@@ -50,6 +50,10 @@ type ScheduledScalerStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Deployment",type=string,JSONPath=`.spec.deploymentName`
+// +kubebuilder:printcolumn:name="Orig Replicas",type=integer,JSONPath=`.status.storedReplicaCount`
+// +kubebuilder:printcolumn:name="Target Replicas",type=integer,JSONPath=`.spec.replicaCount`
 
 // ScheduledScaler is the Schema for the scheduledscalers API
 type ScheduledScaler struct {
